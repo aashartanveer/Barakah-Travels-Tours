@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.barakahtravels.com/sitemap.xml
+Sitemap: https://aashartanveer.github.io/Barakah-Travels-Tours/sitemap.xml
