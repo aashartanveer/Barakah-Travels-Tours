@@ -1,0 +1,29 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Barakah Travels logo">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e7d09a"/>
+      <stop offset="0.5" stop-color="#d8b765"/>
+      <stop offset="1" stop-color="#c8a24a"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14573f"/>
+      <stop offset="1" stop-color="#0b3d2e"/>
+    </linearGradient>
+  </defs>
+  <!-- outer ring -->
+  <circle cx="32" cy="32" r="31" fill="url(#green)" stroke="url(#gold)" stroke-width="2"/>
+  <!-- crescent -->
+  <path d="M46 16 a14 14 0 1 0 0 26 a11 11 0 1 1 0 -26 z" fill="url(#gold)" opacity="0.95"/>
+  <!-- star -->
+  <path d="M48 26 l1.4 3.1 3.4 .4 -2.5 2.3 .7 3.3 -3-1.7 -3 1.7 .7-3.3 -2.5-2.3 3.4-.4 z" fill="url(#gold)"/>
+  <!-- Kaaba -->
+  <g transform="translate(20.5,33)">
+    <rect x="0" y="6" width="20" height="17" rx="1.5" fill="url(#gold)"/>
+    <rect x="0" y="6" width="20" height="4" fill="#0b3d2e" opacity="0.85"/>
+    <rect x="0" y="7.4" width="20" height="1.2" fill="url(#gold)"/>
+    <!-- door -->
+    <rect x="8" y="14" width="4" height="9" rx="0.6" fill="#0b3d2e" opacity="0.8"/>
+    <!-- base step -->
+    <rect x="-2" y="23" width="24" height="3" rx="1" fill="url(#gold)" opacity="0.85"/>
+  </g>
+</svg>
