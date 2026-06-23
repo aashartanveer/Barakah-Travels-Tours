@@ -11,7 +11,7 @@
 
 const PRICE_LIST = {
 
-  lastUpdated: "22 June 2026",   // ← change this each week when you update
+  lastUpdated: "23 June 2026",   // ← change this each week when you update
 
   packages: {
     "7":  { price: 250000 },     // 7 Days Umrah
