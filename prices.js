@@ -14,9 +14,9 @@ const PRICE_LIST = {
   lastUpdated: "23 June 2026",   // ← change this each week when you update
 
   packages: {
-    "7":  { price: 270000 },     // 7 Days Umrah
-    "15": { price: 350000 },     // 15 Days Umrah
-    "21": { price: 380000 }      // 21 Days Umrah
+    "7":  { price: 250000 },     // 7 Days Umrah
+    "15": { price: 340000 },     // 15 Days Umrah
+    "21": { price: 360000 }      // 21 Days Umrah
   }
 
 };
