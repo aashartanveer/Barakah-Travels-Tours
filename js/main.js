@@ -1,7 +1,6 @@
 /* ===== Barakah Travels — Scripts ===== */
 const WHATSAPP_NUMBER = "923056782156"; // +92 305 6782156
 
-// Mobile nav toggle
 document.addEventListener("DOMContentLoaded", () => {
   const toggle = document.querySelector(".nav-toggle");
   const links = document.querySelector(".nav-links");
@@ -19,19 +18,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const yr = document.getElementById("year");
   if (yr) yr.textContent = new Date().getFullYear();
 
-  // Inject prices from prices.js (single source of truth)
-  if (typeof PRICE_LIST !== "undefined") {
-    document.querySelectorAll("[data-price]").forEach((el) => {
-      const key = el.getAttribute("data-price");
-      const pkg = PRICE_LIST.packages[key];
-      if (pkg) {
-        el.innerHTML = `PKR ${Number(pkg.price).toLocaleString("en-US")} <small>/ person</small>`;
-      }
-    });
-    document.querySelectorAll("[data-updated]").forEach((el) => {
-      el.textContent = PRICE_LIST.lastUpdated;
-    });
-  }
+  // Show prices: first from prices.js (instant), then refresh from the
+  // Google Sheet so the latest sheet prices always win.
+  renderPrices();
+  loadPricesFromSheet();
 
   // Build WhatsApp links from data attributes
   document.querySelectorAll("[data-wa]").forEach((el) => {
@@ -62,6 +52,65 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+function renderPrices() {
+  if (typeof PRICE_LIST === "undefined") return;
+  document.querySelectorAll("[data-price]").forEach((el) => {
+    const key = el.getAttribute("data-price");
+    const pkg = PRICE_LIST.packages[key];
+    if (pkg && Number(pkg.price) > 0) {
+      el.innerHTML = `PKR ${Number(pkg.price).toLocaleString("en-US")} <small>/ person</small>`;
+    }
+  });
+  document.querySelectorAll("[data-updated]").forEach((el) => {
+    el.textContent = PRICE_LIST.lastUpdated;
+  });
+}
+
+/* Fetch latest prices from the published Google Sheet (CSV).
+   Sheet layout (columns A and B):
+     package , price
+     7       , 250000
+     15      , 340000
+     21      , 360000
+     updated , 23 June 2026
+   If the sheet can't be reached, the prices.js values stay on screen. */
+function loadPricesFromSheet() {
+  if (typeof PRICE_LIST === "undefined" || !PRICE_LIST.sheetCsvUrl) return;
+  // cache-buster so visitors always get the freshest sheet values
+  const url = PRICE_LIST.sheetCsvUrl + (PRICE_LIST.sheetCsvUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+  fetch(url)
+    .then((r) => {
+      if (!r.ok) throw new Error("sheet fetch failed");
+      return r.text();
+    })
+    .then((csv) => {
+      let changed = false;
+      csv.split(/\r?\n/).forEach((line) => {
+        const cells = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+        // find the package key anywhere in the row; its value is the next cell
+        for (let i = 0; i < cells.length - 1; i++) {
+          const key = cells[i].toLowerCase();
+          const val = cells.slice(i + 1).join(",").trim();
+          if (key === "updated" && val) {
+            PRICE_LIST.lastUpdated = val;
+            changed = true;
+            break;
+          }
+          if (PRICE_LIST.packages[key]) {
+            const num = parseInt(cells[i + 1].replace(/[^0-9]/g, ""), 10);
+            if (num > 0) {
+              PRICE_LIST.packages[key].price = num;
+              changed = true;
+            }
+            break;
+          }
+        }
+      });
+      if (changed) renderPrices();
+    })
+    .catch(() => { /* sheet unreachable — keep prices.js fallback values */ });
+}
 
 function waLink(msg) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
