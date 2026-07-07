@@ -1,4 +1,4 @@
-/* ===== Barakah Travels — Scripts ===== */
+/* ===== Barakah Travels - Scripts ===== */
 const WHATSAPP_NUMBER = "923056782156"; // +92 305 6782156
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const people = form.people ? form.people.value.trim() : "";
       const message = form.message.value.trim();
       const text =
-        `*New Umrah Inquiry — Barakah Travels*%0A%0A` +
+        `*New Umrah Inquiry - Barakah Travels*%0A%0A` +
         `*Name:* ${name}%0A` +
         `*Phone:* ${phone}%0A` +
         `*Package:* ${pkg}%0A` +
@@ -109,7 +109,7 @@ function loadPricesFromSheet() {
       });
       if (changed) renderPrices();
     })
-    .catch(() => { /* sheet unreachable — keep prices.js fallback values */ });
+    .catch(() => { /* sheet unreachable - keep prices.js fallback values */ });
 }
 
 function waLink(msg) {
