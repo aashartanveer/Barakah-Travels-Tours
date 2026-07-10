@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadPricesFromSheet();
 
   initAnimations();
+  initBackgroundFX();
 
   // Build WhatsApp links from data attributes
   document.querySelectorAll("[data-wa]").forEach((el) => {
@@ -214,6 +215,88 @@ function initAnimations() {
       items.forEach((it) => {
         it.el.style.transform = "translateY(" + (-y * it.depth) + "px)";
       });
+      ticking = false;
+    });
+  }, { passive: true });
+}
+
+/* =====================================================================
+   ANIMATED BACKGROUNDS: hero slideshow + banner parallax
+   ===================================================================== */
+function initBackgroundFX() {
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced) return;
+
+  const IMGS = {
+    kaabaSunset: "https://images.unsplash.com/photo-1580418827493-f2b22c0a76cb?auto=format&fit=crop&w=1920&q=80",
+    clockTower:  "https://images.unsplash.com/photo-1565330770968-0240c0046ce3?auto=format&fit=crop&w=1920&q=80",
+    madinah:     "https://images.unsplash.com/photo-1572358899655-f63ece97bfa5?auto=format&fit=crop&w=1920&q=80",
+    haramAerial: "https://images.unsplash.com/photo-1592326871020-04f58c1a52f3?auto=format&fit=crop&w=1920&q=80",
+    kaabaNight:  "https://images.unsplash.com/photo-1513072064285-240f87fa81e8?auto=format&fit=crop&w=1920&q=80"
+  };
+
+  // --- Hero slideshow: crossfade Makkah & Madinah with slow zoom ---
+  const hero = document.querySelector(".hero");
+  let heroFx = null;
+  if (hero) {
+    heroFx = document.createElement("div");
+    heroFx.className = "hero-fx";
+    heroFx.setAttribute("aria-hidden", "true");
+    const slides = [IMGS.kaabaSunset, IMGS.clockTower, IMGS.madinah].map((url, i) => {
+      const d = document.createElement("div");
+      d.className = "slide" + (i === 0 ? " active" : "");
+      d.style.backgroundImage = "url('" + url + "')";
+      heroFx.appendChild(d);
+      return d;
+    });
+    const veil = document.createElement("div");
+    veil.className = "veil";
+    heroFx.appendChild(veil);
+    hero.prepend(heroFx);
+
+    let cur = 0;
+    setInterval(() => {
+      slides[cur].classList.remove("active");
+      cur = (cur + 1) % slides.length;
+      slides[cur].classList.add("active");
+    }, 7000);
+  }
+
+  // --- Inner page banner: moving background + parallax on scroll ---
+  const banner = document.querySelector(".banner");
+  let bannerFx = null;
+  if (banner) {
+    bannerFx = document.createElement("div");
+    bannerFx.className = "banner-fx";
+    bannerFx.setAttribute("aria-hidden", "true");
+    const s = document.createElement("div");
+    s.className = "slide";
+    // vary the banner image per page for a richer feel
+    const page = location.pathname.split("/").pop() || "index.html";
+    const perPage = {
+      "packages.html": IMGS.kaabaNight,
+      "services.html": IMGS.haramAerial,
+      "about.html":    IMGS.madinah,
+      "gallery.html":  IMGS.clockTower,
+      "contact.html":  IMGS.kaabaSunset
+    };
+    s.style.backgroundImage = "url('" + (perPage[page] || IMGS.haramAerial) + "')";
+    bannerFx.appendChild(s);
+    const veil = document.createElement("div");
+    veil.className = "veil";
+    bannerFx.appendChild(veil);
+    banner.prepend(bannerFx);
+  }
+
+  // --- Scroll parallax for hero and banner background layers ---
+  let ticking = false;
+  window.addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const y = window.scrollY;
+      if (heroFx)   heroFx.style.transform = "translateY(" + y * 0.28 + "px)";
+      if (bannerFx) bannerFx.style.transform = "translateY(" + y * 0.22 + "px)";
       ticking = false;
     });
   }, { passive: true });

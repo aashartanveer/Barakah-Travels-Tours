@@ -401,3 +401,75 @@ section, .footer, .banner, .hero { position: relative; z-index: 2; }
   .bg-ornaments { display: none; }
   .cta-band { animation: none; }
 }
+
+/* =====================================================================
+   ANIMATED BACKGROUNDS (hero slideshow, banner parallax, drifts)
+   ===================================================================== */
+
+/* cinematic slow zoom + drift for background images */
+@keyframes kenburns {
+  from { transform: scale(1) translate(0, 0); }
+  to   { transform: scale(1.16) translate(1.6%, -1.6%); }
+}
+
+/* --- Hero: crossfading slideshow layer (injected by JS) --- */
+.hero { overflow: hidden; }
+.hero-fx {
+  position: absolute; inset: -6% 0; z-index: 0;
+  overflow: hidden; will-change: transform;
+}
+.hero-fx .slide {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  opacity: 0;
+  transition: opacity 2.2s ease-in-out;
+  animation: kenburns 18s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+.hero-fx .slide:nth-child(2) { animation-delay: -6s; }
+.hero-fx .slide:nth-child(3) { animation-delay: -12s; }
+.hero-fx .slide.active { opacity: 1; }
+.hero-fx .veil {
+  position: absolute; inset: 0;
+  background: linear-gradient(rgba(11,61,46,.72), rgba(11,61,46,.82));
+}
+.hero-inner { position: relative; z-index: 2; }
+
+/* --- Inner page banners: Ken Burns + scroll parallax layer --- */
+.banner { overflow: hidden; }
+.banner-fx {
+  position: absolute; inset: -18% 0; z-index: 0;
+  overflow: hidden; will-change: transform;
+}
+.banner-fx .slide {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  animation: kenburns 22s ease-in-out infinite alternate;
+}
+.banner-fx .veil {
+  position: absolute; inset: 0;
+  background: linear-gradient(rgba(11,61,46,.72), rgba(11,61,46,.82));
+}
+.banner .container { position: relative; z-index: 2; }
+
+/* --- Package card images: continuous gentle drift --- */
+@keyframes bgDrift {
+  from { background-position: 50% 38%; }
+  to   { background-position: 50% 62%; }
+}
+.pkg .pkg-img { animation: bgDrift 16s ease-in-out infinite alternate; }
+
+/* --- CTA band: slow vertical pan of the background photo --- */
+@keyframes ctaPan {
+  from { background-position: center 32%; }
+  to   { background-position: center 68%; }
+}
+.cta-band {
+  animation: glowPulse 5s ease-in-out infinite,
+             ctaPan 20s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-fx .slide, .banner-fx .slide, .pkg .pkg-img { animation: none; }
+  .cta-band { animation: none; }
+}
