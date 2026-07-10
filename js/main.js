@@ -23,6 +23,8 @@ document.addEventListener("DOMContentLoaded", () => {
   renderPrices();
   loadPricesFromSheet();
 
+  initAnimations();
+
   // Build WhatsApp links from data attributes
   document.querySelectorAll("[data-wa]").forEach((el) => {
     const msg = el.getAttribute("data-wa") || "Assalamu Alaikum, I would like to know more about your Umrah packages.";
@@ -114,4 +116,105 @@ function loadPricesFromSheet() {
 
 function waLink(msg) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+}
+
+/* =====================================================================
+   ANIMATIONS: scroll reveal, counters, navbar, floating ornaments
+   ===================================================================== */
+function initAnimations() {
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced) return;
+
+  // 1) Tag elements for scroll-reveal (no HTML changes needed)
+  const groups = [
+    ".section-head", ".card", ".pkg", ".quote", ".step",
+    ".gallery a", ".faq details", ".split > *", ".contact-grid > *",
+    ".cta-band", ".info-card"
+  ];
+  groups.forEach((sel) => {
+    document.querySelectorAll(sel).forEach((el, i) => {
+      el.classList.add("reveal");
+      // stagger siblings slightly for a cascade effect
+      el.style.setProperty("--rd", Math.min(i % 6, 4) * 0.12 + "s");
+    });
+  });
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("in");
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+  document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+
+  // 2) Animated counters in the hero stats (570+, 10+, 24/7)
+  document.querySelectorAll(".hero-stats .stat strong").forEach((el) => {
+    const raw = el.textContent.trim();
+    const match = raw.match(/^(\d+)(.*)$/);
+    if (!match) return;
+    const target = parseInt(match[1], 10);
+    const suffix = match[2];
+    let started = false;
+    const cio = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !started) {
+        started = true;
+        const t0 = performance.now();
+        const dur = 1600;
+        (function tick(now) {
+          const p = Math.min((now - t0) / dur, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(target * eased) + suffix;
+          if (p < 1) requestAnimationFrame(tick);
+        })(t0);
+        cio.disconnect();
+      }
+    }, { threshold: 0.5 });
+    cio.observe(el);
+  });
+
+  // 3) Navbar elevation on scroll
+  const nav = document.querySelector(".nav");
+  const onScrollNav = () => nav && nav.classList.toggle("scrolled", window.scrollY > 40);
+  onScrollNav();
+  window.addEventListener("scroll", onScrollNav, { passive: true });
+
+  // 4) Floating golden ornaments (crescents & stars) with scroll parallax
+  const layer = document.createElement("div");
+  layer.className = "bg-ornaments";
+  layer.setAttribute("aria-hidden", "true");
+  const symbols = ["☪", "✦", "✧", "✴", "✹"]; // ☪ ✦ ✧ ✴ ✹
+  const count = window.innerWidth < 700 ? 10 : 18;
+  const items = [];
+  for (let i = 0; i < count; i++) {
+    const s = document.createElement("span");
+    const inner = document.createElement("i");
+    inner.textContent = symbols[i % symbols.length];
+    s.appendChild(inner);
+    const size = 12 + Math.random() * 22;
+    s.style.left = Math.random() * 100 + "%";
+    s.style.top = Math.random() * 100 + "%";
+    s.style.fontSize = size + "px";
+    s.style.opacity = (0.25 + Math.random() * 0.5).toFixed(2);
+    s.style.animationDuration = 7 + Math.random() * 9 + "s";
+    s.style.animationDelay = -Math.random() * 10 + "s";
+    layer.appendChild(s);
+    items.push({ el: s, depth: 0.02 + Math.random() * 0.09 });
+  }
+  document.body.appendChild(layer);
+
+  // parallax: ornaments drift at different speeds while scrolling
+  let ticking = false;
+  window.addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const y = window.scrollY;
+      items.forEach((it) => {
+        it.el.style.transform = "translateY(" + (-y * it.depth) + "px)";
+      });
+      ticking = false;
+    });
+  }, { passive: true });
 }

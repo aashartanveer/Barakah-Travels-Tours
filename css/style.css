@@ -274,3 +274,130 @@ form { background: var(--white); border-radius: var(--radius); padding: 32px; bo
   .steps { grid-template-columns: 1fr; }
   section { padding: 56px 0; }
 }
+
+/* =====================================================================
+   ANIMATION SYSTEM
+   ===================================================================== */
+
+/* --- Hero entrance (staggered) --- */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(34px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes softZoom {
+  from { transform: scale(1.08); }
+  to   { transform: scale(1); }
+}
+.hero .eyebrow, .hero h1, .hero p, .hero-actions, .hero-stats {
+  opacity: 0;
+  animation: riseIn .9s cubic-bezier(.22,.8,.3,1) forwards;
+}
+.hero .eyebrow  { animation-delay: .15s; }
+.hero h1        { animation-delay: .32s; }
+.hero p         { animation-delay: .5s; }
+.hero-actions   { animation-delay: .68s; }
+.hero-stats     { animation-delay: .88s; }
+
+/* golden shimmer sweep on the main heading */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.hero h1 {
+  background: linear-gradient(110deg, var(--cream) 42%, var(--gold-300) 50%, var(--cream) 58%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: riseIn .9s cubic-bezier(.22,.8,.3,1) .32s forwards,
+             shimmer 5.5s linear 1.4s infinite;
+}
+
+/* --- Inner page banners: gentle fade + lift --- */
+.banner h1, .banner p, .banner .crumb {
+  opacity: 0;
+  animation: riseIn .8s cubic-bezier(.22,.8,.3,1) forwards;
+}
+.banner p     { animation-delay: .18s; }
+.banner .crumb{ animation-delay: .34s; }
+
+/* --- Scroll reveal (elements get .reveal from JS, .in when visible) --- */
+.reveal {
+  opacity: 0;
+  transform: translateY(36px);
+  transition: opacity .8s cubic-bezier(.22,.8,.3,1), transform .8s cubic-bezier(.22,.8,.3,1);
+  transition-delay: var(--rd, 0s);
+  will-change: opacity, transform;
+}
+.reveal.in { opacity: 1; transform: translateY(0); }
+
+/* --- Navbar: elevate once scrolled --- */
+.nav { transition: box-shadow .35s ease, background .35s ease; }
+.nav.scrolled {
+  background: rgba(9, 48, 36, .98);
+  box-shadow: 0 6px 24px rgba(0,0,0,.28);
+}
+
+/* --- Floating ornament layer (injected by JS) --- */
+.bg-ornaments {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none; overflow: hidden;
+}
+.bg-ornaments span {
+  position: absolute;
+  display: block;
+  color: rgba(200, 162, 74, .35);
+  text-shadow: 0 0 14px rgba(200,162,74,.25);
+  will-change: transform;
+}
+.bg-ornaments span i {
+  display: block;
+  font-style: normal;
+  animation: floatDrift linear infinite;
+  animation-duration: inherit;
+  animation-delay: inherit;
+}
+@keyframes floatDrift {
+  0%   { transform: translateY(0) rotate(0deg); }
+  50%  { transform: translateY(-46px) rotate(10deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+/* keep page content above the ornament layer */
+section, .footer, .banner, .hero { position: relative; z-index: 2; }
+
+/* --- Card & gallery lift already exists; add gentle glow on hover --- */
+.pkg:hover, .card:hover {
+  box-shadow: 0 20px 44px rgba(11,61,46,.2), 0 0 0 1px rgba(200,162,74,.35);
+}
+
+/* --- Slow Ken Burns drift on package card images --- */
+.pkg .pkg-img { transition: transform 6s ease; transform-origin: center; }
+.pkg:hover .pkg-img { transform: scale(1.09); }
+
+/* --- CTA band: soft breathing glow --- */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200,162,74,.0); }
+  50%      { box-shadow: 0 0 44px 4px rgba(200,162,74,.22); }
+}
+.cta-band { animation: glowPulse 5s ease-in-out infinite; }
+
+/* --- Buttons: sheen sweep on hover --- */
+.btn { position: relative; overflow: hidden; }
+.btn::after {
+  content: "";
+  position: absolute; top: 0; left: -80%;
+  width: 50%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent);
+  transform: skewX(-20deg);
+  transition: left .55s ease;
+}
+.btn:hover::after { left: 130%; }
+
+/* --- Respect users who prefer less motion --- */
+@media (prefers-reduced-motion: reduce) {
+  .hero .eyebrow, .hero h1, .hero p, .hero-actions, .hero-stats,
+  .banner h1, .banner p, .banner .crumb { animation: none; opacity: 1; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .bg-ornaments { display: none; }
+  .cta-band { animation: none; }
+}
