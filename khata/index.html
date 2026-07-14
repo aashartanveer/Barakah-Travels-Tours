@@ -146,6 +146,10 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
     <div id="homeReminders"></div>
   </div>
   <div class="card">
+    <h2>🗓️ Recent bills <button class="btn small secondary" style="float:right" onclick="goTab('bills')">＋ Add bill</button></h2>
+    <div id="homeBills"></div>
+  </div>
+  <div class="card">
     <h2>🕘 Recent activity</h2>
     <div id="recentList"></div>
   </div>
@@ -167,6 +171,13 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
     <h2>🗓️ Monthly bill calculator</h2>
     <label>Bill name</label>
     <input id="billName" placeholder="e.g. Milk, Roti, Van fare, Mess">
+    <label>Customer (optional — pick from your log book)</label>
+    <select id="billCust" onchange="document.getElementById('billKhataRow').style.display=this.value?'block':'none'"><option value="">— no customer —</option></select>
+    <div id="billKhataRow" style="display:none;margin-top:8px">
+      <label style="display:flex;align-items:center;gap:8px;margin:0;font-size:13.5px;color:var(--text)">
+        <input type="checkbox" id="billToKhata" checked style="width:auto"> Also add this bill to the customer's khata (as "I gave")
+      </label>
+    </div>
     <label>Per-day payment (Rs)</label>
     <input id="billRate" type="number" min="0" inputmode="decimal" placeholder="e.g. 250" oninput="updateBillTotal()">
     <label>Select the days on the calendar</label>
@@ -325,6 +336,7 @@ function go(p, btn){
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 }
+function goTab(p){ go(p, document.querySelector(`nav button[data-p="${p}"]`)); }
 
 // ---------- customers ----------
 const balanceOf = c => c.entries.reduce((s, e) => s + (e.dir === 'gave' ? e.amt : -e.amt), 0);
@@ -502,17 +514,26 @@ function saveBill(){
   if (!name) return toast('Enter a bill name');
   if (!selDays.size) return toast('Select at least one day on the calendar');
   if (!rate) return toast('Enter the per-day payment');
-  db.bills.push({ id: uid(), name, rate, year: calY, month: calM, days: [...selDays].sort((a, b) => a - b), total: selDays.size * rate, created: today() });
-  save(); renderBills();
+  const custId = document.getElementById('billCust').value || null;
+  const cust = custId ? db.customers.find(c => c.id === custId) : null;
+  const total = selDays.size * rate;
+  const monthLabel = new Date(calY, calM).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  db.bills.push({ id: uid(), name, rate, year: calY, month: calM, days: [...selDays].sort((a, b) => a - b), total, created: today(), custId, custName: cust ? cust.name : '' });
+  if (cust && document.getElementById('billToKhata').checked) {
+    cust.entries.push({ id: uid(), dir: 'gave', amt: total, date: today(), note: `${name} bill — ${monthLabel} (${selDays.size} days × Rs ${rate})`, due: '' });
+    toast(`Bill saved & added to ${cust.name}'s khata 💾`);
+  } else toast('Bill saved 💾');
+  save(); renderAll();
   document.getElementById('billName').value = ''; document.getElementById('billRate').value = '';
-  clearDays(); toast('Bill saved 💾');
+  document.getElementById('billCust').value = ''; document.getElementById('billKhataRow').style.display = 'none';
+  clearDays();
 }
 function renderBills(){
   const el = document.getElementById('billList');
   if (!db.bills.length) { el.innerHTML = '<div class="empty"><span class="e-ico">🗓️</span>No saved bills yet.</div>'; return; }
   el.innerHTML = [...db.bills].reverse().map(b => `
     <div class="bill-item">
-      <div class="bh"><span>${esc(b.name)}</span><span class="pos">${rs(b.total)}</span></div>
+      <div class="bh"><span>${esc(b.name)}${b.custName ? ' · 👤 ' + esc(b.custName) : ''}</span><span class="pos">${rs(b.total)}</span></div>
       <div class="bm">${new Date(b.year, b.month).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })} · ${b.days.length} days × Rs ${b.rate.toLocaleString('en-PK')}</div>
       <div class="bm">Days: ${b.days.join(', ')}</div>
       <div class="act-row" style="margin-bottom:0">
@@ -525,6 +546,9 @@ function loadBill(id){
   const b = db.bills.find(x => x.id === id);
   document.getElementById('billName').value = b.name;
   document.getElementById('billRate').value = b.rate;
+  document.getElementById('billCust').value = b.custId || '';
+  document.getElementById('billKhataRow').style.display = b.custId ? 'block' : 'none';
+  document.getElementById('billToKhata').checked = false;
   calY = b.year; calM = b.month; selDays = new Set(b.days);
   db.bills = db.bills.filter(x => x.id !== id); save();
   renderCal(); updateBillTotal(); renderBills();
@@ -584,6 +608,12 @@ function renderHome(){
   document.getElementById('totGive').textContent = rs(give);
   const up = [...db.reminders].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 4);
   document.getElementById('homeReminders').innerHTML = up.length ? up.map(remRow).join('') : '<div class="empty">No upcoming reminders 🎉</div>';
+  const hb = [...db.bills].reverse().slice(0, 4);
+  document.getElementById('homeBills').innerHTML = hb.length ? hb.map(b =>
+    `<div class="bill-item" onclick="goTab('bills')" style="cursor:pointer">
+      <div class="bh"><span>${esc(b.name)}${b.custName ? ' · 👤 ' + esc(b.custName) : ''}</span><span class="pos">${rs(b.total)}</span></div>
+      <div class="bm">${new Date(b.year, b.month).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })} · ${b.days.length} days × Rs ${b.rate.toLocaleString('en-PK')}</div>
+    </div>`).join('') : '<div class="empty">No bills yet — tap ＋ Add bill 🗓️</div>';
   const recent = db.customers.flatMap(c => c.entries.map(e => ({ ...e, cname: c.name }))).sort((a, b) => b.id.localeCompare(a.id)).slice(0, 6);
   document.getElementById('recentList').innerHTML = recent.length ? recent.map(e =>
     `<div class="entry ${e.dir}"><div><div class="a ${e.dir === 'gave' ? 'neg' : 'pos'}">${e.dir === 'gave' ? '−' : '+'} ${rs(e.amt)}</div>
@@ -701,7 +731,12 @@ function initCloud(){
 initCloud();
 
 // ---------- init ----------
-function renderAll(){ renderCustomers(); renderBills(); renderReminders(); renderHome(); }
+function renderAll(){
+  const sel = document.getElementById('billCust'), cur = sel.value;
+  sel.innerHTML = '<option value="">— no customer —</option>' + [...db.customers].sort((a,b)=>a.name.localeCompare(b.name)).map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  sel.value = cur;
+  renderCustomers(); renderBills(); renderReminders(); renderHome();
+}
 initCal(); updateBillTotal(); renderAll();
 checkDueNotifications(); setInterval(checkDueNotifications, 60000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
