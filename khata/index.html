@@ -117,6 +117,10 @@ h2{font-size:17px;margin-bottom:12px;color:var(--green-dark)}
 .seg button{flex:1;border:none;background:none;padding:9px;border-radius:8px;font-weight:700;font-size:13.5px;color:var(--muted)}
 .seg button.on.gave-seg{background:var(--red);color:#fff}
 .seg button.on.got-seg{background:#059669;color:#fff}
+.seg button.on.took-seg{background:var(--gold);color:#3b2c00}
+.seg3 button{font-size:12.5px;line-height:1.25;padding:8px 4px}
+.seg3 button small{font-weight:500;font-size:10.5px;opacity:.8}
+.entry.took{background:#fef3c7}
 hr{border:none;border-top:1px solid var(--border);margin:14px 0}
 .bill-item{padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px}
 .bill-item .bh{display:flex;justify-content:space-between;font-weight:700}
@@ -243,9 +247,10 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
     <button class="btn small secondary" onclick="editCurrent()">✏️ Edit</button>
   </div>
   <hr>
-  <div class="seg">
-    <button class="gave-seg on" id="segGave" onclick="setDir('gave')">🔻 I gave (udhaar diya)</button>
-    <button class="got-seg" id="segGot" onclick="setDir('got')">🔺 I got (wapas mila)</button>
+  <div class="seg seg3">
+    <button class="gave-seg on" id="segGave" onclick="setDir('gave')">🔻 I gave<br><small>udhaar diya</small></button>
+    <button class="took-seg" id="segTook" onclick="setDir('took')">🔸 I took<br><small>udhaar liya</small></button>
+    <button class="got-seg" id="segGot" onclick="setDir('got')">✅ Received<br><small>wapis mil gya</small></button>
   </div>
   <div class="row2">
     <div><label>Amount (Rs) *</label><input id="eAmt" type="number" min="0" inputmode="decimal" placeholder="0"></div>
@@ -339,7 +344,14 @@ function go(p, btn){
 function goTab(p){ go(p, document.querySelector(`nav button[data-p="${p}"]`)); }
 
 // ---------- customers ----------
+// balance = what the customer owes YOU. gave (udhaar diya) adds;
+// took (udhaar liya) and received-back (wapis mila) subtract.
 const balanceOf = c => c.entries.reduce((s, e) => s + (e.dir === 'gave' ? e.amt : -e.amt), 0);
+const DIR_META = {
+  gave: { sign: '−', cls: 'neg', tag: 'Gave (udhaar diya)' },
+  took: { sign: '+', cls: 'pos', tag: 'Took (udhaar liya)' },
+  got:  { sign: '+', cls: 'pos', tag: 'Received (wapis mila)' }
+};
 
 function renderCustomers(){
   const q = (document.getElementById('custSearch').value || '').toLowerCase();
@@ -423,6 +435,7 @@ function openDetail(id){
 function setDir(d){
   curDir = d;
   document.getElementById('segGave').classList.toggle('on', d === 'gave');
+  document.getElementById('segTook').classList.toggle('on', d === 'took');
   document.getElementById('segGot').classList.toggle('on', d === 'got');
 }
 function renderEntries(c){
@@ -430,7 +443,7 @@ function renderEntries(c){
   if (!c.entries.length) { el.innerHTML = '<div class="empty">No entries yet — add the first one above.</div>'; return; }
   el.innerHTML = [...c.entries].sort((a, b) => b.date.localeCompare(a.date)).map(e => `
     <div class="entry ${e.dir}">
-      <div><div class="a ${e.dir === 'gave' ? 'neg' : 'pos'}">${e.dir === 'gave' ? '−' : '+'} ${rs(e.amt)}</div>
+      <div><div class="a ${DIR_META[e.dir].cls}">${DIR_META[e.dir].sign} ${rs(e.amt)} <span class="tag">${DIR_META[e.dir].tag}</span></div>
         <div class="d">${fmtDate(e.date)}${e.due ? ' · due ' + fmtDate(e.due) : ''}</div>
         ${e.note ? `<div class="n">${esc(e.note)}</div>` : ''}</div>
       <div class="entry-actions">
@@ -446,7 +459,7 @@ function saveEntry(){
   const data = { dir: curDir, amt, date: document.getElementById('eDate').value || today(), note: document.getElementById('eNote').value.trim(), due: document.getElementById('eDue').value || '' };
   if (editEntryId) { Object.assign(c.entries.find(e => e.id === editEntryId), data); editEntryId = null; }
   else c.entries.push({ id: uid(), ...data });
-  if (data.due) db.reminders.push({ id: uid(), title: (data.dir === 'gave' ? 'Collect ' : 'Pay ') + rs(amt) + (data.dir === 'gave' ? ' from ' : ' to ') + c.name, custId: c.id, date: data.due, time: '10:00', done: false });
+  if (data.due) db.reminders.push({ id: uid(), title: (data.dir === 'took' ? 'Pay back ' + rs(amt) + ' to ' : 'Collect ' + rs(amt) + ' from ') + c.name, custId: c.id, date: data.due, time: '10:00', done: false });
   save(); openDetail(curId); renderAll(); toast('Entry saved ✅');
 }
 function editEntry(id){
@@ -616,8 +629,8 @@ function renderHome(){
     </div>`).join('') : '<div class="empty">No bills yet — tap ＋ Add bill 🗓️</div>';
   const recent = db.customers.flatMap(c => c.entries.map(e => ({ ...e, cname: c.name }))).sort((a, b) => b.id.localeCompare(a.id)).slice(0, 6);
   document.getElementById('recentList').innerHTML = recent.length ? recent.map(e =>
-    `<div class="entry ${e.dir}"><div><div class="a ${e.dir === 'gave' ? 'neg' : 'pos'}">${e.dir === 'gave' ? '−' : '+'} ${rs(e.amt)}</div>
-     <div class="d">${esc(e.cname)} · ${fmtDate(e.date)}</div></div><span class="tag">${e.dir === 'gave' ? 'Gave' : 'Got'}</span></div>`).join('')
+    `<div class="entry ${e.dir}"><div><div class="a ${DIR_META[e.dir].cls}">${DIR_META[e.dir].sign} ${rs(e.amt)}</div>
+     <div class="d">${esc(e.cname)} · ${fmtDate(e.date)}</div></div><span class="tag">${DIR_META[e.dir].tag}</span></div>`).join('')
     : '<div class="empty">No activity yet — add your first customer 👥</div>';
 }
 

@@ -1,4 +1,4 @@
-const CACHE = 'khata-v4';
+const CACHE = 'khata-v5';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg', './firebase-config.js', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
