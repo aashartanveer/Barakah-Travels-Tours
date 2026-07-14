@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bill & Subscription Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0f1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #0f1220;
+    --card: #1a1f35;
+    --card2: #222946;
+    --text: #eef1ff;
+    --muted: #9aa3c7;
+    --accent: #6c8cff;
+    --green: #3ddc84;
+    --yellow: #ffcc4d;
+    --red: #ff5c6c;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  .container { max-width: 860px; margin: 0 auto; }
+  header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  h1 { font-size: 1.5rem; }
+  h1 span { color: var(--accent); }
+  .notif-btn {
+    background: var(--card2); color: var(--muted); border: 1px solid #2e375e;
+    padding: 8px 14px; border-radius: 10px; cursor: pointer; font-size: .85rem;
+  }
+  .notif-btn.on { color: var(--green); border-color: var(--green); }
+
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 22px; }
+  .stat { background: var(--card); border-radius: var(--radius); padding: 14px 16px; }
+  .stat .num { font-size: 1.4rem; font-weight: 700; }
+  .stat .lbl { color: var(--muted); font-size: .8rem; margin-top: 2px; }
+
+  form {
+    background: var(--card); border-radius: var(--radius); padding: 18px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px; margin-bottom: 26px; align-items: end;
+  }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: .78rem; color: var(--muted); }
+  input, select {
+    background: var(--card2); border: 1px solid #2e375e; color: var(--text);
+    padding: 10px 12px; border-radius: 10px; font-size: .9rem; width: 100%;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  button.add {
+    background: var(--accent); color: #fff; border: none; padding: 11px 18px;
+    border-radius: 10px; font-weight: 600; cursor: pointer; font-size: .9rem;
+  }
+  button.add:hover { filter: brightness(1.1); }
+
+  .item {
+    background: var(--card); border-radius: var(--radius); padding: 16px;
+    display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+    border-left: 5px solid var(--green);
+  }
+  .item.warn { border-left-color: var(--yellow); }
+  .item.urgent { border-left-color: var(--red); }
+  .item.overdue { border-left-color: var(--red); background: #2a1a26; }
+  .item .info { flex: 1; min-width: 0; }
+  .item .name { font-weight: 600; font-size: 1rem; }
+  .item .meta { color: var(--muted); font-size: .8rem; margin-top: 3px; }
+  .badge {
+    padding: 5px 12px; border-radius: 20px; font-size: .8rem; font-weight: 700; white-space: nowrap;
+    background: #1d3326; color: var(--green);
+  }
+  .badge.warn { background: #38300f; color: var(--yellow); }
+  .badge.urgent, .badge.overdue { background: #3a1620; color: var(--red); }
+  .amount { font-weight: 700; font-size: .95rem; white-space: nowrap; }
+  .actions { display: flex; gap: 6px; }
+  .actions button {
+    background: var(--card2); border: 1px solid #2e375e; color: var(--muted);
+    border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: .8rem;
+  }
+  .actions button:hover { color: var(--text); border-color: var(--accent); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+  .section-title { font-size: .85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px; }
+  @media (max-width: 560px) {
+    .item { flex-wrap: wrap; }
+    .actions { width: 100%; justify-content: flex-end; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>💳 Bill & Subscription <span>Tracker</span></h1>
+    <button class="notif-btn" id="notifBtn" onclick="enableNotifs()">🔔 Enable reminders</button>
+  </header>
+
+  <div class="summary">
+    <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">Active items</div></div>
+    <div class="stat"><div class="num" id="statMonthly">Rs 0</div><div class="lbl">Monthly total</div></div>
+    <div class="stat"><div class="num" id="statSoon">0</div><div class="lbl">Due in 7 days</div></div>
+    <div class="stat"><div class="num" id="statNext">—</div><div class="lbl">Next due</div></div>
+  </div>
+
+  <form id="addForm">
+    <label>Name
+      <input type="text" id="fName" placeholder="e.g. Netflix, Electricity bill" required>
+    </label>
+    <label>Type
+      <select id="fType">
+        <option value="subscription">Subscription</option>
+        <option value="bill">Bill</option>
+      </select>
+    </label>
+    <label>Amount (Rs)
+      <input type="number" id="fAmount" min="0" step="any" placeholder="0">
+    </label>
+    <label>Next due date
+      <input type="date" id="fDate" required>
+    </label>
+    <label>Repeats
+      <select id="fCycle">
+        <option value="monthly">Monthly</option>
+        <option value="yearly">Yearly</option>
+        <option value="weekly">Weekly</option>
+        <option value="none">One-time</option>
+      </select>
+    </label>
+    <button type="submit" class="add">+ Add</button>
+  </form>
+
+  <div id="list"></div>
+</div>
+
+<script>
+const KEY = 'billTrackerItems';
+const NOTIF_KEY = 'billTrackerNotified';
+let items = JSON.parse(localStorage.getItem(KEY) || '[]');
+
+function save() {
+  localStorage.setItem(KEY, JSON.stringify(items));
+  idbSet('items', items);
+}
+
+/* Mirror data into IndexedDB so the service worker can check reminders
+   even when the app is closed */
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('billTracker', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+function idbSet(key, val) {
+  return openDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction('kv', 'readwrite').objectStore('kv').put(JSON.parse(JSON.stringify(val)), key);
+    tx.onsuccess = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  })).catch(() => {});
+}
+
+function daysLeft(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dateStr + 'T00:00:00');
+  return Math.round((due - today) / 86400000);
+}
+
+function fmtMoney(n) {
+  return 'Rs ' + Number(n || 0).toLocaleString();
+}
+
+function advance(dateStr, cycle) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDate();
+  if (cycle === 'monthly') {
+    d.setDate(1); d.setMonth(d.getMonth() + 1);
+    d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  }
+  else if (cycle === 'yearly') {
+    d.setDate(1); d.setFullYear(d.getFullYear() + 1);
+    d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  }
+  else if (cycle === 'weekly') d.setDate(d.getDate() + 7);
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+
+function badgeFor(dl) {
+  if (dl < 0) return ['overdue', 'Overdue ' + Math.abs(dl) + 'd'];
+  if (dl === 0) return ['urgent', 'Due today!'];
+  if (dl === 1) return ['urgent', 'Due tomorrow'];
+  if (dl <= 7) return ['warn', dl + ' days left'];
+  return ['', dl + ' days left'];
+}
+
+function render() {
+  const list = document.getElementById('list');
+  if (!items.length) {
+    list.innerHTML = '<div class="empty">No bills or subscriptions yet. Add your first one above 👆</div>';
+  } else {
+    const sorted = [...items].sort((a, b) => a.date.localeCompare(b.date));
+    list.innerHTML = sorted.map(it => {
+      const dl = daysLeft(it.date);
+      const [cls, label] = badgeFor(dl);
+      return `<div class="item ${cls}">
+        <div class="info">
+          <div class="name">${it.type === 'bill' ? '🧾' : '🔁'} ${esc(it.name)}</div>
+          <div class="meta">Due ${new Date(it.date+'T00:00:00').toDateString()} · ${it.cycle === 'none' ? 'one-time' : it.cycle}</div>
+        </div>
+        <div class="amount">${fmtMoney(it.amount)}</div>
+        <span class="badge ${cls}">${label}</span>
+        <div class="actions">
+          ${it.cycle !== 'none' ? `<button onclick="renew('${it.id}')" title="Mark paid — moves due date to next cycle">✓ Paid</button>` : `<button onclick="removeItem('${it.id}')">✓ Paid</button>`}
+          <button onclick="removeItem('${it.id}')" title="Delete">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // stats
+  document.getElementById('statTotal').textContent = items.length;
+  const monthly = items.reduce((s, it) => {
+    const a = Number(it.amount || 0);
+    if (it.cycle === 'monthly') return s + a;
+    if (it.cycle === 'yearly') return s + a / 12;
+    if (it.cycle === 'weekly') return s + a * 4.33;
+    return s;
+  }, 0);
+  document.getElementById('statMonthly').textContent = fmtMoney(Math.round(monthly));
+  document.getElementById('statSoon').textContent = items.filter(it => { const d = daysLeft(it.date); return d >= 0 && d <= 7; }).length;
+  const next = items.map(it => it.date).sort()[0];
+  document.getElementById('statNext').textContent = next ? new Date(next+'T00:00:00').toLocaleDateString(undefined, {day:'numeric', month:'short'}) : '—';
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+document.getElementById('addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  items.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name: document.getElementById('fName').value.trim(),
+    type: document.getElementById('fType').value,
+    amount: document.getElementById('fAmount').value,
+    date: document.getElementById('fDate').value,
+    cycle: document.getElementById('fCycle').value
+  });
+  save(); render(); checkReminders();
+  e.target.reset();
+});
+
+function renew(id) {
+  const it = items.find(i => i.id === id);
+  if (it) { it.date = advance(it.date, it.cycle); save(); render(); }
+}
+function removeItem(id) {
+  items = items.filter(i => i.id !== id);
+  save(); render();
+}
+
+/* ---------- Reminders (1 day before + due today) ---------- */
+function enableNotifs() {
+  if (!('Notification' in window)) { alert('This browser does not support notifications.'); return; }
+  Notification.requestPermission().then(p => { updateNotifBtn(); if (p === 'granted') checkReminders(); });
+}
+function updateNotifBtn() {
+  const btn = document.getElementById('notifBtn');
+  if ('Notification' in window && Notification.permission === 'granted') {
+    btn.textContent = '🔔 Reminders on';
+    btn.classList.add('on');
+  }
+}
+function checkReminders() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  // If the service worker is in control, let it handle notifications (avoids duplicates)
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage('check-reminders');
+    return;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const notified = JSON.parse(localStorage.getItem(NOTIF_KEY) || '{}');
+  items.forEach(it => {
+    const dl = daysLeft(it.date);
+    let msg = null;
+    if (dl === 1) msg = `⏰ "${it.name}" ends/is due TOMORROW (${fmtMoney(it.amount)})`;
+    else if (dl === 0) msg = `🚨 "${it.name}" is due TODAY (${fmtMoney(it.amount)})`;
+    else if (dl < 0) msg = `⚠️ "${it.name}" is OVERDUE by ${Math.abs(dl)} day(s)`;
+    const notifId = it.id + '|' + it.date + '|' + dl;
+    if (msg && notified[notifId] !== today) {
+      new Notification('Bill Tracker', { body: msg });
+      notified[notifId] = today;
+    }
+  });
+  localStorage.setItem(NOTIF_KEY, JSON.stringify(notified));
+}
+
+/* ---------- PWA: offline support + background reminder sync ---------- */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(async reg => {
+    idbSet('items', items); // ensure SW can see current data
+    // Ask for periodic background sync (Chrome/Edge on Android, when installed)
+    if ('periodicSync' in reg) {
+      try {
+        const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+        if (status.state === 'granted') {
+          await reg.periodicSync.register('bill-check', { minInterval: 12 * 60 * 60 * 1000 });
+        }
+      } catch (e) { /* not supported — in-app reminders still work */ }
+    }
+    // Also trigger a check via the SW now (shows system notifications)
+    if (reg.active && Notification.permission === 'granted') reg.active.postMessage('check-reminders');
+  }).catch(() => {});
+}
+
+updateNotifBtn();
+render();
+checkReminders();
+// re-check every hour while the page is open, and at midnight rollover
+setInterval(() => { render(); checkReminders(); }, 3600000);
+</script>
+</body>
+</html>
