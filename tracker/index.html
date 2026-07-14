@@ -118,6 +118,9 @@
   }
   button.add:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(124,108,255,0.45); }
   button.add:active { transform: translateY(0); }
+  button.add.cancel { background: transparent; border: 1px solid var(--card-border); color: var(--muted); box-shadow: none; }
+  button.add.cancel:hover { color: var(--text); border-color: rgba(251,113,133,0.4); }
+  .panel.editing { border-color: rgba(124,108,255,0.55); box-shadow: 0 0 0 3px rgba(124,108,255,0.12); }
   @media (max-width: 620px) {
     form { grid-template-columns: 1fr 1fr; }
     form > label:first-child { grid-column: 1 / -1; }
@@ -169,6 +172,7 @@
     font-family: inherit; transition: all .2s ease; white-space: nowrap;
   }
   .actions button.pay:hover { color: var(--green); border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.08); }
+  .actions button.edit:hover { color: var(--accent-2); border-color: rgba(78,198,224,0.4); background: rgba(78,198,224,0.08); }
   .actions button.del:hover { color: var(--red); border-color: rgba(251,113,133,0.4); background: rgba(251,113,133,0.08); }
   .empty {
     text-align: center; color: var(--muted); padding: 48px 20px;
@@ -203,7 +207,7 @@
   </div>
 
   <div class="panel">
-    <div class="panel-title">Add new</div>
+    <div class="panel-title" id="panelTitle">Add new</div>
     <form id="addForm">
       <label>Name
         <input type="text" id="fName" placeholder="Netflix, Electricity bill…" required>
@@ -229,7 +233,8 @@
             <option value="none">One-time</option>
           </select>
         </label>
-        <button type="submit" class="add">＋ Add</button>
+        <button type="submit" class="add" id="submitBtn">＋ Add</button>
+        <button type="button" class="add cancel" id="cancelBtn" onclick="cancelEdit()" style="display:none">Cancel</button>
       </div>
     </form>
   </div>
@@ -346,6 +351,7 @@ function render() {
           ${it.cycle !== 'none'
             ? `<button class="pay" onclick="renew('${it.id}')" title="Mark paid — moves due date to next cycle">✓ Paid</button>`
             : `<button class="pay" onclick="removeItem('${it.id}')">✓ Paid</button>`}
+          <button class="edit" onclick="editItem('${it.id}')" title="Edit">✎ Edit</button>
           <button class="del" onclick="removeItem('${it.id}')" title="Delete">Delete</button>
         </div>
       </div>`;
@@ -376,19 +382,53 @@ document.getElementById('tabs').addEventListener('click', e => {
   render();
 });
 
+let editingId = null;
+
 document.getElementById('addForm').addEventListener('submit', e => {
   e.preventDefault();
-  items.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+  const data = {
     name: document.getElementById('fName').value.trim(),
     type: document.getElementById('fType').value,
     amount: document.getElementById('fAmount').value,
     date: document.getElementById('fDate').value,
     cycle: document.getElementById('fCycle').value
-  });
+  };
+  if (editingId) {
+    const it = items.find(i => i.id === editingId);
+    if (it) Object.assign(it, data);
+    cancelEdit();
+  } else {
+    items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ...data });
+    e.target.reset();
+  }
   save(); render(); checkReminders();
-  e.target.reset();
 });
+
+function editItem(id) {
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  editingId = id;
+  document.getElementById('fName').value = it.name;
+  document.getElementById('fType').value = it.type;
+  document.getElementById('fAmount').value = it.amount;
+  document.getElementById('fDate').value = it.date;
+  document.getElementById('fCycle').value = it.cycle;
+  document.getElementById('panelTitle').textContent = 'Edit: ' + it.name;
+  document.getElementById('submitBtn').textContent = '✓ Save changes';
+  document.getElementById('cancelBtn').style.display = '';
+  document.querySelector('.panel').classList.add('editing');
+  document.querySelector('.panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('fName').focus();
+}
+
+function cancelEdit() {
+  editingId = null;
+  document.getElementById('addForm').reset();
+  document.getElementById('panelTitle').textContent = 'Add new';
+  document.getElementById('submitBtn').textContent = '＋ Add';
+  document.getElementById('cancelBtn').style.display = 'none';
+  document.querySelector('.panel').classList.remove('editing');
+}
 
 function renew(id) {
   const it = items.find(i => i.id === id);
@@ -396,6 +436,7 @@ function renew(id) {
 }
 function removeItem(id) {
   items = items.filter(i => i.id !== id);
+  if (editingId === id) cancelEdit();
   save(); render();
 }
 
