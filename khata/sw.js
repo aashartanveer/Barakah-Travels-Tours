@@ -1,5 +1,5 @@
-const CACHE = 'khata-v2';
-const ASSETS = ['./', './index.html', './manifest.json', './icon.svg', './firebase-config.js'];
+const CACHE = 'khata-v3';
+const ASSETS = ['./', './index.html', './manifest.json', './icon.svg', './firebase-config.js', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
