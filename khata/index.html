@@ -175,8 +175,11 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
     <h2>🗓️ Monthly bill calculator</h2>
     <label>Bill name</label>
     <input id="billName" placeholder="e.g. Milk, Roti, Van fare, Mess">
-    <label>Customer (optional — pick from your log book)</label>
-    <select id="billCust" onchange="document.getElementById('billKhataRow').style.display=this.value?'block':'none'"><option value="">— no customer —</option></select>
+    <label>Customer (optional — pick from log book or phone)</label>
+    <div style="display:flex;gap:8px;align-items:stretch">
+      <select id="billCust" style="flex:1" onchange="document.getElementById('billKhataRow').style.display=this.value?'block':'none'"><option value="">— no customer —</option></select>
+      <button class="btn small secondary" style="white-space:nowrap" onclick="pickBillCustFromPhone()">📇 Phone</button>
+    </div>
     <div id="billKhataRow" style="display:none;margin-top:8px">
       <label style="display:flex;align-items:center;gap:8px;margin:0;font-size:13.5px;color:var(--text)">
         <input type="checkbox" id="billToKhata" checked style="width:auto"> Also add this bill to the customer's khata (as "I gave")
@@ -409,6 +412,30 @@ async function importFromContacts(){
       if (!db.customers.some(c => c.phone && phone && c.phone === phone)) { db.customers.push({ id: uid(), name, phone, note: '', entries: [] }); added++; }
     });
     save(); renderAll(); toast(added + ' customer(s) imported 📇');
+  } catch (e) { /* user cancelled */ }
+}
+
+async function pickBillCustFromPhone(){
+  if (!('contacts' in navigator && 'ContactsManager' in window))
+    return toast('Contact picker works on Android Chrome — open this app on your phone 📱');
+  try {
+    const picked = await navigator.contacts.select(['name', 'tel'], { multiple: false });
+    if (!picked.length) return;
+    const p = picked[0];
+    const name = (p.name && p.name[0]) || 'Unknown';
+    const phone = ((p.tel && p.tel[0]) || '').replace(/[^\d+]/g, '');
+    // reuse existing customer if the number is already in the log book
+    let c = db.customers.find(x => x.phone && phone && x.phone === phone);
+    if (!c) {
+      c = { id: uid(), name, phone, note: '', entries: [] };
+      db.customers.push(c);
+      save();
+      toast(name + ' added to log book & selected 📇');
+    } else toast(c.name + ' selected');
+    renderAll();
+    const sel = document.getElementById('billCust');
+    sel.value = c.id;
+    sel.dispatchEvent(new Event('change'));
   } catch (e) { /* user cancelled */ }
 }
 
