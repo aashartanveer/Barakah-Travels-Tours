@@ -146,6 +146,15 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
     <div class="stat give"><div class="lbl">You will give</div><div class="amt" id="totGive">Rs 0</div></div>
   </div>
   <div class="card">
+    <h2>👥 My customers</h2>
+    <div class="search-bar"><span class="si">🔍</span><input id="custSearch" placeholder="Search customer by name or phone…" oninput="renderCustomers()"></div>
+    <div class="act-row">
+      <button class="btn" onclick="openCustomerForm()">＋ Add customer</button>
+      <button class="btn secondary" onclick="importFromContacts()">📇 From phone contacts</button>
+    </div>
+    <div id="custList"></div>
+  </div>
+  <div class="card">
     <h2>⏰ Upcoming reminders</h2>
     <div id="homeReminders"></div>
   </div>
@@ -157,16 +166,6 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
     <h2>🕘 Recent activity</h2>
     <div id="recentList"></div>
   </div>
-</section>
-
-<!-- CUSTOMERS -->
-<section class="page" id="page-customers">
-  <div class="search-bar"><span class="si">🔍</span><input id="custSearch" placeholder="Search customer by name or phone…" oninput="renderCustomers()"></div>
-  <div class="act-row">
-    <button class="btn" onclick="openCustomerForm()">＋ Add customer</button>
-    <button class="btn secondary" onclick="importFromContacts()">📇 From phone contacts</button>
-  </div>
-  <div id="custList"></div>
 </section>
 
 <!-- BILLS -->
@@ -223,7 +222,6 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
 
 <nav>
   <button class="active" data-p="home" onclick="go('home',this)"><span class="ni">🏠</span>Home</button>
-  <button data-p="customers" onclick="go('customers',this)"><span class="ni">👥</span>Customers</button>
   <button data-p="bills" onclick="go('bills',this)"><span class="ni">🗓️</span>Bills</button>
   <button data-p="reminders" onclick="go('reminders',this)"><span class="ni">⏰</span>Reminders</button>
 </nav>
