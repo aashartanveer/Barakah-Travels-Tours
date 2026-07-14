@@ -176,14 +176,6 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
     <h2>⏰ Upcoming reminders</h2>
     <div id="homeReminders"></div>
   </div>
-  <div class="card">
-    <h2>🗓️ Recent bills <button class="btn small secondary" style="float:right" onclick="goTab('bills')">＋ Add bill</button></h2>
-    <div id="homeBills"></div>
-  </div>
-  <div class="card">
-    <h2>🕘 Recent activity</h2>
-    <div id="recentList"></div>
-  </div>
 </section>
 
 <!-- BILLS -->
@@ -198,9 +190,13 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
       <button class="btn small secondary" style="white-space:nowrap" onclick="pickBillCustFromPhone()">📇 Phone</button>
     </div>
     <div id="billKhataRow" style="display:none;margin-top:8px">
-      <label style="display:flex;align-items:center;gap:8px;margin:0;font-size:13.5px;color:var(--text)">
-        <input type="checkbox" id="billToKhata" checked style="width:auto"> Also add this bill to the customer's khata (as "I gave")
-      </label>
+      <label>Add this bill to the customer's khata as:</label>
+      <select id="billKhataMode">
+        <option value="gave">🔻 I gave (udhaar diya) — they owe me</option>
+        <option value="took">🔸 I took (udhaar liya) — I owe them</option>
+        <option value="pay">💸 I need to pay (mujhe dena ha) — I owe them</option>
+        <option value="none">Don't add to khata</option>
+      </select>
     </div>
     <label>Per-day payment (Rs)</label>
     <input id="billRate" type="number" min="0" inputmode="decimal" placeholder="e.g. 250" oninput="updateBillTotal()">
@@ -222,7 +218,7 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
     <div style="margin-top:12px"><button class="btn gold" onclick="saveBill()">💾 Save this bill</button></div>
   </div>
   <div class="card">
-    <h2>📋 Saved bills</h2>
+    <h2>🕘 Recent bills</h2>
     <div id="billList"></div>
   </div>
 </section>
@@ -573,17 +569,27 @@ function saveBill(){
   if (!selDays.size) return toast('Select at least one day on the calendar');
   if (!rate) return toast('Enter the per-day payment');
   const custId = document.getElementById('billCust').value || null;
-  const cust = custId ? db.customers.find(c => c.id === custId) : null;
+  let cust = custId ? db.customers.find(c => c.id === custId) : null;
+  let mode = document.getElementById('billKhataMode').value;
+  // no customer picked: auto-create (or reuse) one named after the bill so it
+  // shows in the Home customer list; bills default to "I need to pay"
+  if (!cust) {
+    cust = db.customers.find(c => c.name.toLowerCase() === name.toLowerCase());
+    if (!cust) { cust = { id: uid(), name, phone: '', note: 'Auto-created from bill', entries: [] }; db.customers.push(cust); }
+    mode = 'pay'; // the khata-mode selector was hidden, so use the bill default
+  }
   const total = selDays.size * rate;
   const monthLabel = new Date(calY, calM).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-  db.bills.push({ id: uid(), name, rate, year: calY, month: calM, days: [...selDays].sort((a, b) => a - b), total, created: today(), custId, custName: cust ? cust.name : '' });
-  if (cust && document.getElementById('billToKhata').checked) {
-    cust.entries.push({ id: uid(), dir: 'gave', amt: total, date: today(), note: `${name} bill — ${monthLabel} (${selDays.size} days × Rs ${rate})`, due: '' });
+  db.bills.push({ id: uid(), name, rate, year: calY, month: calM, days: [...selDays].sort((a, b) => a - b), total, created: today(), custId: cust.id, custName: cust.name });
+  if (mode !== 'none') {
+    const dir = mode === 'gave' ? 'gave' : 'took';
+    cust.entries.push({ id: uid(), dir, amt: total, date: today(), note: `${name} bill — ${monthLabel} (${selDays.size} days × Rs ${rate})${mode === 'pay' ? ' — to pay' : ''}`, due: '' });
     toast(`Bill saved & added to ${cust.name}'s khata 💾`);
   } else toast('Bill saved 💾');
   save(); renderAll();
   document.getElementById('billName').value = ''; document.getElementById('billRate').value = '';
   document.getElementById('billCust').value = ''; document.getElementById('billKhataRow').style.display = 'none';
+  document.getElementById('billKhataMode').value = 'gave';
   clearDays();
 }
 function renderBills(){
@@ -605,9 +611,9 @@ function loadBill(id){
   const b = db.bills.find(x => x.id === id);
   document.getElementById('billName').value = b.name;
   document.getElementById('billRate').value = b.rate;
-  document.getElementById('billCust').value = b.custId || '';
-  document.getElementById('billKhataRow').style.display = b.custId ? 'block' : 'none';
-  document.getElementById('billToKhata').checked = false;
+  document.getElementById('billCust').value = db.customers.some(c => c.id === b.custId) ? b.custId : '';
+  document.getElementById('billKhataRow').style.display = 'block';
+  document.getElementById('billKhataMode').value = 'none'; // avoid double-posting on re-save
   calY = b.year; calM = b.month; selDays = new Set(b.days);
   db.bills = db.bills.filter(x => x.id !== id); save();
   renderCal(); updateBillTotal(); renderBills();
@@ -689,17 +695,6 @@ function renderHome(){
   document.getElementById('totGive').textContent = rs(give);
   const up = [...db.reminders].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 4);
   document.getElementById('homeReminders').innerHTML = up.length ? up.map(remRow).join('') : '<div class="empty">No upcoming reminders 🎉</div>';
-  const hb = [...db.bills].reverse().slice(0, 4);
-  document.getElementById('homeBills').innerHTML = hb.length ? hb.map(b =>
-    `<div class="bill-item" onclick="goTab('bills')" style="cursor:pointer">
-      <div class="bh"><span>${esc(b.name)}${b.custName ? ' · 👤 ' + esc(b.custName) : ''}</span><span class="pos">${rs(b.total)}</span></div>
-      <div class="bm">${new Date(b.year, b.month).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })} · ${b.days.length} days × Rs ${b.rate.toLocaleString('en-PK')}</div>
-    </div>`).join('') : '<div class="empty">No bills yet — tap ＋ Add bill 🗓️</div>';
-  const recent = db.customers.flatMap(c => c.entries.map(e => ({ ...e, cname: c.name }))).sort((a, b) => b.id.localeCompare(a.id)).slice(0, 6);
-  document.getElementById('recentList').innerHTML = recent.length ? recent.map(e =>
-    `<div class="entry ${e.dir}"><div><div class="a ${DIR_META[e.dir].cls}">${DIR_META[e.dir].sign} ${rs(e.amt)}</div>
-     <div class="d">${esc(e.cname)} · ${fmtDate(e.date)}</div></div><span class="tag">${DIR_META[e.dir].tag}</span></div>`).join('')
-    : '<div class="empty">No activity yet — add your first customer 👥</div>';
 }
 
 // ---------- backup & share ----------
