@@ -1,4 +1,4 @@
-const CACHE = 'bill-tracker-v2';
+const CACHE = 'bill-tracker-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
